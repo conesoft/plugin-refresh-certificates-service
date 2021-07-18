@@ -74,7 +74,7 @@ namespace Conesoft.Services.RefreshCertificates
 
             var client = await LetsEncrypt.Client.Login(letsEncryptMail, () => new HttpClient(), dnsimpleToken, production: true);
 
-            var bytes = await client.CreateWildcardCertificateFor(new[] { cert.NameWithoutExtension }, certificatePassword, new LetsEncrypt.CertificateInformation()
+            var bytes = await client.CreateCertificateFor(cert.NameWithoutExtension, certificatePassword, new LetsEncrypt.CertificateInformation()
             {
                 CountryName = "CH",
                 State = "Switzerland",

@@ -9,10 +9,10 @@
   <ItemGroup>
     <PackageReference Include="Conesoft.Files" Version="1.5.21" />
     <PackageReference Include="Conesoft.Hosting" Version="0.5.12" />
-    <PackageReference Include="Conesoft.LetsEncrypt" Version="1.0.5" />
+    <PackageReference Include="Conesoft.LetsEncrypt" Version="1.0.6" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="4.1.2" />
-    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
   </ItemGroup>
 </Project>

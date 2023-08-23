@@ -1,10 +1,12 @@
 using Conesoft.Files;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +32,8 @@ namespace Conesoft.Services.RefreshCertificates
             var certificateStorage = Hosting.Host.GlobalStorage / "Certificates";
             var deploymentSource = Hosting.Host.Root / "Deployments" / "Websites";
 
+            await Notify($"Certificate watcher started");
+
             await foreach (var files in deploymentSource.Live().Changes())
             {
                 if (stoppingToken.IsCancellationRequested)
@@ -49,6 +53,7 @@ namespace Conesoft.Services.RefreshCertificates
                     }
                     else
                     {
+                        await Notify($"Updating Certificate for {cert}");
                         logger.LogInformation("creating certificate for {cert}", cert);
                         await CreateCertificateFor(file);
                         logger.LogInformation("... done, valid till {date}", Load(file).NotAfter);
@@ -64,8 +69,6 @@ namespace Conesoft.Services.RefreshCertificates
 
         private async Task CreateCertificateFor(File cert)
         {
-            var configuration = new ConfigurationBuilder().AddJsonFile(Hosting.Host.GlobalConfiguration.Path).Build();
-
             var letsEncryptMail = configuration["hosting:letsencrypt-mail"];
             var dnsimpleToken = configuration["hosting:dnsimple-token"];
             var certificatePassword = configuration["hosting:certificate-password"];
@@ -84,6 +87,23 @@ namespace Conesoft.Services.RefreshCertificates
             });
 
             await cert.WriteBytes(bytes);
+        }
+
+        async Task Notify(string message)
+        {
+            var configuration = new ConfigurationBuilder().AddJsonFile(Hosting.Host.GlobalSettings.Path).Build();
+            var conesoftSecret = configuration["conesoft:secret"] ?? throw new Exception("Conesoft Secret not found in Configuration");
+
+            var title = "Certificate Update";
+
+            var query = new QueryBuilder
+            {
+                { "token", conesoftSecret! },
+                { "title", title },
+                { "message", message }
+            };
+
+            await new HttpClient().GetAsync($@"https://conesoft.net/notify" + query.ToQueryString());
         }
     }
 }

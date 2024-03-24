@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -103,7 +102,14 @@ namespace Conesoft.Services.RefreshCertificates
                 { "message", message }
             };
 
-            await new HttpClient().GetAsync($@"https://conesoft.net/notify" + query.ToQueryString());
+            try
+            {
+                await new HttpClient().GetAsync($@"https://conesoft.net/notify" + query.ToQueryString());
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Failed to notify");
+            }
         }
     }
 }

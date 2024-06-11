@@ -22,6 +22,8 @@ var certificateStorage = Host.GlobalStorage / "Certificates";
 var deploymentSource = Host.Root / "Deployments" / "Websites";
 
 Log.Information("certification watcher started");
+Log.Information("certificate storage: {storage}", certificateStorage);
+Log.Information("deployment source: {source}", deploymentSource);
 
 var lastUpdate = DateTime.MinValue;
 

@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Conesoft.Files" Version="1.9.3" />
-    <PackageReference Include="Conesoft.Hosting" Version="1.4.0" />
+    <PackageReference Include="Conesoft.Hosting" Version="1.4.1" />
     <PackageReference Include="Conesoft.LetsEncrypt" Version="1.1.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />

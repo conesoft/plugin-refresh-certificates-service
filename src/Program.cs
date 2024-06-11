@@ -54,7 +54,7 @@ await foreach (var files in deploymentSource.Live().Changes())
         foreach (var cert in inactive)
         {
             var file = certificateStorage / Filename.From(cert, "pfx");
-            if (file.LoadCertificate(configuration).NotAfter > DateTime.Today)
+            if (file.LoadCertificate(configuration).NotAfter <= DateTime.Today)
             {
                 Log.Information("deleted old certificate for {cert}", cert);
                 file.Delete();

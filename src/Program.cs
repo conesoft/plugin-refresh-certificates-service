@@ -9,7 +9,6 @@ using System.Linq;
 
 var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
 builder.Services
-    .AddLoggingToHost()
     .AddPeriodicGarbageCollection(TimeSpan.FromMinutes(5));
 
 var host = builder.Build();
@@ -27,9 +26,9 @@ Log.Information("deployment source: {source}", deploymentSource);
 
 var lastUpdate = DateTime.MinValue;
 
-await foreach (var files in deploymentSource.Live().Changes())
+await foreach (var files in deploymentSource.Changes())
 {
-    if (files.ThereAreChanges || lastUpdate + TimeSpan.FromHours(1) < DateTime.UtcNow)
+    if (lastUpdate + TimeSpan.FromHours(1) < DateTime.UtcNow)
     {
         var active = files.All.Files().Select(f => f.NameWithoutExtension).ToArray();
         var inactive = certificateStorage.Files.Where(f => active.Contains(f.NameWithoutExtension) == false).Select(f => f.NameWithoutExtension).ToArray();

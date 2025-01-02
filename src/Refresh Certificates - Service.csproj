@@ -10,11 +10,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Conesoft.Files" Version="3.0.3" />
-    <PackageReference Include="Conesoft.Hosting" Version="2.0.0" />
+    <PackageReference Include="Conesoft.Files" Version="3.0.5" />
+    <PackageReference Include="Conesoft.Hosting" Version="3.3.7" />
     <PackageReference Include="Conesoft.LetsEncrypt" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
-    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>

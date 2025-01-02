@@ -1,24 +1,32 @@
 using Conesoft.Files;
 using Conesoft.Hosting;
+using Conesoft.Notifications;
 using Conesoft.Services.RefreshCertificates.Helpers;
 using Humanizer;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System;
 using System.Linq;
 
 var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
-builder.Services
-    .AddPeriodicGarbageCollection(TimeSpan.FromMinutes(5));
+
+builder
+    .AddHostConfigurationFiles()
+    .AddHostEnvironmentInfo()
+    .AddLoggingService()
+    .AddNotificationService()
+    ;
 
 var host = builder.Build();
 
-await host.StartAsync();
+using var lifetime = await host.StartConsoleAsync();
 
-var configuration = new ConfigurationBuilder().AddJsonFile(Host.GlobalConfiguration.Path).Build();
+var configuration = builder.Configuration;
+var environment = host.Services.GetRequiredService<HostEnvironment>();
+var notifier = host.Services.GetRequiredService<Notifier>();
 
-var certificateStorage = Host.GlobalStorage / "Certificates";
-var deploymentSource = Host.Root / "Deployments" / "Websites";
+var certificateStorage = environment.Global.Storage / "Certificates";
+var deploymentSource = environment.Root / "Deployments" / "Websites";
 
 Log.Information("certification watcher started");
 Log.Information("certificate storage: {storage}", certificateStorage);
@@ -26,11 +34,11 @@ Log.Information("deployment source: {source}", deploymentSource);
 
 var lastUpdate = DateTime.MinValue;
 
-await foreach (var files in deploymentSource.Changes())
+await foreach (var _ in deploymentSource.Live(allDirectories: false, lifetime.CancellationToken))
 {
     if (lastUpdate + TimeSpan.FromHours(1) < DateTime.UtcNow)
     {
-        var active = files.All.Files().Select(f => f.NameWithoutExtension).ToArray();
+        var active = deploymentSource.Files.Select(f => f.NameWithoutExtension).ToArray();
         var inactive = certificateStorage.Files.Where(f => active.Contains(f.NameWithoutExtension) == false).Select(f => f.NameWithoutExtension).ToArray();
 
         foreach (var cert in active)
@@ -43,7 +51,7 @@ await foreach (var files in deploymentSource.Changes())
             }
             else
             {
-                await Conesoft.Helpers.Notification.Notify($"Updating Certificate for {cert}");
+                await notifier.Notify(title: "Certificate Update", $"Updating Certificate for {cert}");
                 Log.Information("creating certificate for {cert}", cert);
                 await file.CreateCertificate(configuration);
                 Log.Information("... done, valid till {date}", file.LoadCertificate(configuration).NotAfter.Humanize());

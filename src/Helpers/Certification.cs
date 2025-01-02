@@ -14,7 +14,7 @@ public static class Certification
         var dnsimpleToken = configuration["hosting:dnsimple-token"];
         var certificatePassword = configuration["hosting:certificate-password"];
 
-        var certificateStorage = Hosting.Host.GlobalStorage / "Certificates";
+        //var certificateStorage = Hosting.Host.GlobalStorage / "Certificates";
 
         var client = await LetsEncrypt.Client.Login(letsEncryptMail, () => new HttpClient(), dnsimpleToken, production: true);
 

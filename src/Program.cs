@@ -26,7 +26,7 @@ var environment = host.Services.GetRequiredService<HostEnvironment>();
 var notifier = host.Services.GetRequiredService<Notifier>();
 
 var certificateStorage = environment.Global.Storage / "Certificates";
-var deploymentSource = environment.Root / "Deployments" / "Websites";
+var deploymentSource = environment.Global.Deployments;
 
 Log.Information("certification watcher started");
 Log.Information("certificate storage: {storage}", certificateStorage);
@@ -38,7 +38,7 @@ await foreach (var _ in deploymentSource.Live(allDirectories: false, lifetime.Ca
 {
     if (lastUpdate + TimeSpan.FromHours(1) < DateTime.UtcNow)
     {
-        var active = deploymentSource.Files.Select(f => f.NameWithoutExtension).ToArray();
+        var active = deploymentSource.Directories.SelectMany(d => d.Files).Select(f => f.NameWithoutExtension).Where(IsValidDomain).ToArray();
         var inactive = certificateStorage.Files.Where(f => active.Contains(f.NameWithoutExtension) == false).Select(f => f.NameWithoutExtension).ToArray();
 
         foreach (var cert in active)
@@ -75,3 +75,5 @@ await foreach (var _ in deploymentSource.Live(allDirectories: false, lifetime.Ca
         lastUpdate = DateTime.UtcNow;
     }
 }
+
+static bool IsValidDomain(string domain) => Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var result) && result.Scheme == Uri.UriSchemeHttps;

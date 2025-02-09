@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Conesoft.Hosting" Version="3.4.12" />
+    <PackageReference Include="Conesoft.Hosting" Version="3.4.14" />
     <PackageReference Include="Conesoft.LetsEncrypt" Version="2.0.3" />
   </ItemGroup>
 </Project>

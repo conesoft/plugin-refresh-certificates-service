@@ -4,26 +4,38 @@ using Conesoft.Notifications;
 using Conesoft.Services.RefreshCertificates.Helpers;
 using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Serilog;
 using System;
 using System.Linq;
+using System.Net.Http;
 
 var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder(args);
 
 builder
-    .AddHostConfigurationFiles()
+    .AddHostConfigurationFiles(configurator =>
+    {
+        configurator.Add<DnsimpleConfiguration>("dnsimple");
+        configurator.Add<LetsEncryptConfiguration>("letsencrypt");
+    })
     .AddHostEnvironmentInfo()
     .AddLoggingService()
     .AddNotificationService()
     ;
 
+builder.Services.AddHttpClient();
+
 var host = builder.Build();
 
 using var lifetime = await host.StartConsoleAsync();
 
-var configuration = builder.Configuration;
 var environment = host.Services.GetRequiredService<HostEnvironment>();
 var notifier = host.Services.GetRequiredService<Notifier>();
+
+var dnsimple = host.Services.GetRequiredService<IOptions<DnsimpleConfiguration>>();
+var letsencrypt = host.Services.GetRequiredService<IOptions<LetsEncryptConfiguration>>();
+var httpClientFactory = host.Services.GetRequiredService<IHttpClientFactory>();
+
 
 var certificateStorage = environment.Global.Storage / "Certificates";
 var deploymentSource = environment.Global.Deployments;
@@ -34,7 +46,7 @@ Log.Information("deployment source: {source}", deploymentSource);
 
 var lastUpdate = DateTime.MinValue;
 
-await foreach (var _ in deploymentSource.Live(allDirectories: false, lifetime.CancellationToken))
+var watcherCancellationTokenSource = deploymentSource.Live(async () =>
 {
     if (lastUpdate + TimeSpan.FromHours(1) < DateTime.UtcNow)
     {
@@ -44,27 +56,27 @@ await foreach (var _ in deploymentSource.Live(allDirectories: false, lifetime.Ca
         foreach (var cert in active)
         {
             var file = certificateStorage / Filename.From(cert, "pfx");
-            if (file.Exists && file.LoadCertificate(configuration).NotAfter > DateTime.Today + TimeSpan.FromDays(2))
+            if (file.Exists && file.LoadCertificate(letsencrypt).NotAfter > DateTime.Today + TimeSpan.FromDays(2))
             {
-                var timespan = file.LoadCertificate(configuration).NotAfter - DateTime.UtcNow;
+                var timespan = file.LoadCertificate(letsencrypt).NotAfter - DateTime.UtcNow;
                 Log.Information("certificate for {cert} is active and up to date (for {date})", cert, timespan.Humanize(precision: 2));
             }
             else
             {
                 await notifier.Notify(title: "Certificate Update", $"Updating Certificate for {cert}");
                 Log.Information("creating certificate for {cert}", cert);
-                await file.CreateCertificate(configuration);
-                Log.Information("... done, valid till {date}", file.LoadCertificate(configuration).NotAfter.Humanize());
+                await file.CreateCertificate(letsencrypt, dnsimple, httpClientFactory);
+                Log.Information("... done, valid till {date}", file.LoadCertificate(letsencrypt).NotAfter.Humanize());
             }
         }
 
         foreach (var cert in inactive)
         {
             var file = certificateStorage / Filename.From(cert, "pfx");
-            if (file.LoadCertificate(configuration).NotAfter <= DateTime.Today)
+            if (file.LoadCertificate(letsencrypt).NotAfter <= DateTime.Today)
             {
                 Log.Information("deleted old certificate for {cert}", cert);
-                file.Delete();
+                await file.Delete();
             }
             else
             {
@@ -74,6 +86,10 @@ await foreach (var _ in deploymentSource.Live(allDirectories: false, lifetime.Ca
 
         lastUpdate = DateTime.UtcNow;
     }
-}
+});
+
+lifetime.CancellationToken.WaitHandle.WaitOne();
+
+watcherCancellationTokenSource.Cancel();
 
 static bool IsValidDomain(string domain) => Uri.TryCreate($"https://{domain}", UriKind.Absolute, out var result) && result.Scheme == Uri.UriSchemeHttps;

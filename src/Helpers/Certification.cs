@@ -12,7 +12,12 @@ public static class Certification
     {
         var client = await LetsEncrypt.Client.Login(letsEncrypt.Value.Mail, httpClientFactory.CreateClient, dnsimple.Value.Token, production: true);
 
-        var bytes = await client.CreateCertificateFor(cert.NameWithoutExtension, letsEncrypt.Value.CertificatePassword, new LetsEncrypt.CertificateInformation()
+        if (client == null)
+        {
+            return;
+        }
+
+        var bytes = await client.CreateCertificateFor(cert.NameWithoutExtension, letsEncrypt.Value.CertificatePassword, new()
         {
             CountryName = letsEncrypt.Value.CountryName,
             State = letsEncrypt.Value.State,

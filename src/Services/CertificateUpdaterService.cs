@@ -18,10 +18,16 @@ public class CertificateUpdaterService(HostEnvironment environment, IOptions<Dns
     bool alreadyUpdating = false;
     public async Task UpdateCertificates()
     {
-        if (!alreadyUpdating)
+        try
         {
-            alreadyUpdating = true;
-            await ActuallyUpdateCertificates();
+            if (!alreadyUpdating)
+            {
+                alreadyUpdating = true;
+                await ActuallyUpdateCertificates();
+            }
+        }
+        finally
+        {
             alreadyUpdating = false;
         }
     }

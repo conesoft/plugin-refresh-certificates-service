@@ -20,15 +20,24 @@ public class CertificateUpdaterService(HostEnvironment environment, IOptions<Dns
     {
         try
         {
-            if (!alreadyUpdating)
+            lock(this)
             {
+                if (alreadyUpdating) return;
                 alreadyUpdating = true;
-                await ActuallyUpdateCertificates();
             }
+            await ActuallyUpdateCertificates();
+        }
+        catch(Exception exception)
+        {
+            Log.Error("error updating certificates: {exception}", exception);
         }
         finally
         {
-            alreadyUpdating = false;
+            await Task.Delay(5000);
+            lock (this)
+            {
+                alreadyUpdating = false;
+            }
         }
     }
 
@@ -50,10 +59,11 @@ public class CertificateUpdaterService(HostEnvironment environment, IOptions<Dns
             }
             else
             {
-                await notifier.Notify(title: "Certificate Update", $"Updating Certificate for {cert}");
                 Log.Information("creating certificate for {cert}", cert);
                 await CreateCertificate(file);
                 Log.Information("... done, valid till {date}", LoadCertificate(file).NotAfter.Humanize());
+
+                await notifier.Notify(title: "Certificate Update", $"Updated Certificate for {cert}");
             }
         }
 
